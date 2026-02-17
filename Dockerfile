@@ -6,6 +6,8 @@ RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     git \
     ca-certificates \
+    bash \
+    build-essential \
     curl \
     python3 \
     make \
