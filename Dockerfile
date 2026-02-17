@@ -20,8 +20,9 @@ RUN corepack enable
 
 WORKDIR /openclaw
 
-# Pin to a known ref (tag/branch). If it doesn't exist, fall back to main.
-ARG OPENCLAW_GIT_REF=main
+# Pin to a known-good ref (tag/branch). Override in Railway template settings if needed.
+# Using a released tag avoids build breakage when `main` temporarily references unpublished packages.
+ARG OPENCLAW_GIT_REF=v2026.2.9
 RUN git clone --depth 1 --branch "${OPENCLAW_GIT_REF}" https://github.com/openclaw/openclaw.git .
 
 # Patch: relax version requirements for packages that may reference unpublished versions.
@@ -47,6 +48,9 @@ RUN apt-get update \
     ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
+# `openclaw update` expects pnpm. Provide it in the runtime image.
+RUN corepack enable && corepack prepare pnpm@10.23.0 --activate
+
 WORKDIR /app
 
 # Wrapper deps
@@ -63,7 +67,9 @@ RUN printf '%s\n' '#!/usr/bin/env bash' 'exec node /openclaw/dist/entry.js "$@"'
 COPY src ./src
 
 # The wrapper listens on this port.
-ENV OPENCLAW_PUBLIC_PORT=8080
+# IMPORTANT: Do not hardcode a public listen port here.
+# Railway injects PORT at runtime and routes traffic to that port.
+# If we force a different port, deployments can come up but the domain will route elsewhere.
 ENV PORT=8080
 EXPOSE 8080
 CMD ["node", "src/server.js"]
